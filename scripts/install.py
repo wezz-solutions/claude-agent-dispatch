@@ -113,7 +113,7 @@ def install(scope: str, enforce: bool):
         hook_cmd = f"python {str(HOOK_SCRIPT).replace(chr(92), '/')}"
 
         already = any(
-            h.get("command", "") == hook_cmd
+            hook_cmd in json.dumps(h)
             for h in pre_tool if isinstance(h, dict)
         )
 
@@ -122,8 +122,13 @@ def install(scope: str, enforce: bool):
         else:
             pre_tool.append({
                 "matcher": "Agent",
-                "command": hook_cmd,
-                "timeout": 5000,
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": hook_cmd,
+                        "timeout": 5000,
+                    }
+                ],
             })
             _save_json(settings_path, settings)
             print(f"  Agent-intercept hook added to {settings_path}")
@@ -206,7 +211,7 @@ def uninstall(scope: str):
 
     hook_script_str = str(HOOK_SCRIPT).replace("\\", "/")
     original_len = len(pre_tool)
-    pre_tool = [h for h in pre_tool if hook_script_str not in h.get("command", "")]
+    pre_tool = [h for h in pre_tool if hook_script_str not in json.dumps(h)]
 
     if len(pre_tool) < original_len:
         hooks["PreToolUse"] = pre_tool

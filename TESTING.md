@@ -139,6 +139,70 @@ mcp__dispatch__run(
 **Action:** `cat .claude/dispatches/dispatch-audit.jsonl`
 **Expected:** One JSONL entry per dispatch with: ts, id, agent, model, provider, status, cost_usd
 
+## Test 16: Status Line
+**Action:** Look at bottom of Claude Code terminal after restart
+**Expected:** Shows `dispatch: idle` (dimmed) when no agents running
+**Action 2:** Start a dispatch, check status line updates within 3s
+**Expected:** Shows `1 running: implementer/son 5s` (green) and cost
+
+## Test 17: Status Line — Hanging Warning
+**Action:** Manually create a stale marker:
+```python
+# In a terminal:
+python -c "
+import sys; sys.path.insert(0, 'agent-dispatch/scripts')
+from sentinel import SentinelManager; from pathlib import Path
+import os, json
+from datetime import datetime, timezone, timedelta
+sm = SentinelManager(Path('.claude/dispatches'))
+sm.write_marker('d-staletest', pid=99999, agent='test', model='test-model',
+    provider='anthropic', backend='claude-cli', prompt_preview='Stale', timeout=3600)
+# Backdate last_activity by 10 minutes
+import time; mf = Path('.claude/dispatches/d-staletest.marker')
+data = json.loads(mf.read_text())
+old = datetime.now(timezone.utc) - timedelta(minutes=10)
+data['last_activity'] = old.isoformat()
+mf.write_text(json.dumps(data))
+"
+```
+**Expected:** Status line shows red `idle` warning within 3s
+**Cleanup:** Delete `.claude/dispatches/d-staletest.marker`
+
+## Test 18: Install Script — Project Level
+**Action:** `python agent-dispatch/scripts/install.py --enforce`
+**Verify:**
+- `.mcp.json` has `dispatch` under `mcpServers`
+- `.claude/settings.json` has `hooks.PreToolUse` with correct nested format `{matcher, hooks: [{type, command, timeout}]}`
+- `.claude/settings.json` has `statusLine` configured
+- `.claude/dispatch.json` exists with default config
+
+## Test 19: Install Script — User Level
+**Action:** `python agent-dispatch/scripts/install.py --user` (without --enforce)
+**Verify:**
+- `~/.claude/mcp.json` has `dispatch` entry (or creates it)
+- `~/.claude/dispatch.json` exists with default config
+- No hooks added (--enforce was not passed)
+**Cleanup:** `python agent-dispatch/scripts/install.py --user --uninstall`
+
+## Test 20: Uninstall
+**Action:** `python agent-dispatch/scripts/install.py --uninstall`
+**Verify:**
+- `dispatch` removed from `.mcp.json` (mcpServers key preserved)
+- Hook removed from `.claude/settings.json`
+- `.claude/dispatch.json` and `.claude/dispatches/` NOT deleted (user data preserved)
+
+## Test 21: MCP Permission
+**Action:** Verify dispatch MCP tools are callable without permission prompts
+**If prompted:** Add `mcp__dispatch__*` to permissions.allow in settings.json:
+```json
+"mcp__dispatch__run",
+"mcp__dispatch__interactive",
+"mcp__dispatch__status",
+"mcp__dispatch__result",
+"mcp__dispatch__cancel",
+"mcp__dispatch__config"
+```
+
 ## Known Limitations (Not Bugs)
 - `--bare` mode removed because it skips OAuth. Dispatched agents load project hooks/MCP.
 - OpenCode backend untested (requires `go install github.com/opencode-ai/opencode@latest`)

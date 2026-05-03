@@ -1,0 +1,6 @@
+{
+  "name": "agent-dispatch",
+  "version": "0.1.0",
+  "description": "Multi-provider agent dispatch via MCP. Routes to Claude CLI (Anthropic) or OpenCode (Ollama, OpenAI, Groq, etc.).",
+  "skills": "./skills/"
+}

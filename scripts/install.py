@@ -128,13 +128,35 @@ def install(scope: str, enforce: bool):
             _save_json(settings_path, settings)
             print(f"  Agent-intercept hook added to {settings_path}")
 
-    # ── 4. Validate backends ──────────────────────────────
+    # ── 4. Configure status line ─────────────────────────
+    if is_user:
+        settings_path_sl = Path.home() / ".claude" / "settings.json"
+    else:
+        settings_path_sl = project_root / ".claude" / "settings.json"
+
+    settings_sl = _load_json(settings_path_sl)
+    statusline_script = str(PLUGIN_DIR / "scripts" / "statusline.py").replace("\\", "/")
+    statusline_cmd = f"python {statusline_script}"
+
+    existing_sl = settings_sl.get("statusLine", {})
+    if isinstance(existing_sl, dict) and existing_sl.get("command") == statusline_cmd:
+        print(f"  Status line already configured")
+    else:
+        settings_sl["statusLine"] = {
+            "type": "command",
+            "command": statusline_cmd,
+            "refreshInterval": 3,
+        }
+        _save_json(settings_path_sl, settings_sl)
+        print(f"  Status line configured in {settings_path_sl}")
+
+    # ── 5. Validate backends ──────────────────────────────
     print()
     print("Backend availability:")
     print(_check_backend("claude-cli", "claude"))
     print(_check_backend("opencode", "opencode"))
 
-    # ── 5. Summary ────────────────────────────────────────
+    # ── 6. Summary ────────────────────────────────────────
     print()
     print("Installation complete.")
     print()

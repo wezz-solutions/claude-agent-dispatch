@@ -225,11 +225,12 @@ async def interactive(query: str, prompt: str, agent: str = "", model: str = "")
 # ═══════════════════════════════════════════════════════════
 
 @mcp.tool("status")
-async def status(id: str = "") -> str:
+async def status(query: str, id: str = "") -> str:
     """
     Check dispatch status. Empty id = list all active dispatches.
 
     Args:
+        query: Short label (max 20 chars) — e.g. "Check agent status"
         id: Dispatch ID (e.g. "d-a1b2c3d4"). Empty = list all active.
     """
     _ensure_init()
@@ -310,11 +311,12 @@ async def status(id: str = "") -> str:
 # ═══════════════════════════════════════════════════════════
 
 @mcp.tool("result")
-async def result(id: str) -> str:
+async def result(query: str, id: str) -> str:
     """
     Get completed dispatch result. If still running, polls up to 60s.
 
     Args:
+        query: Short label (max 20 chars) — e.g. "Get auth fix result"
         id: Dispatch ID (required)
     """
     _ensure_init()
@@ -365,11 +367,12 @@ async def result(id: str) -> str:
 # ═══════════════════════════════════════════════════════════
 
 @mcp.tool("cancel")
-async def cancel(id: str) -> str:
+async def cancel(query: str, id: str) -> str:
     """
     Cancel a running dispatch by terminating its process.
 
     Args:
+        query: Short label (max 20 chars) — e.g. "Cancel stuck agent"
         id: Dispatch ID to cancel
     """
     _ensure_init()
@@ -417,8 +420,13 @@ async def cancel(id: str) -> str:
 # ═══════════════════════════════════════════════════════════
 
 @mcp.tool("config")
-async def config() -> str:
-    """Show current dispatch configuration: models, agents, providers, backends."""
+async def config(query: str) -> str:
+    """
+    Show current dispatch configuration: models, agents, providers, backends.
+
+    Args:
+        query: Short label (max 20 chars) — e.g. "Show dispatch config"
+    """
     _ensure_init()
 
     lines = [_config.to_summary(), ""]

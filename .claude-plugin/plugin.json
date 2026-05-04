@@ -2,5 +2,35 @@
   "name": "claude-agent-dispatch",
   "version": "0.1.0",
   "description": "Multi-provider agent dispatch for Claude Code. Route tasks to Anthropic, Ollama, OpenAI, Groq — with parallel execution, tier spoofing, and live status.",
-  "skills": "./skills/"
+  "author": {
+    "name": "Wezz Solutions",
+    "url": "https://github.com/wezz-solutions"
+  },
+  "homepage": "https://github.com/wezz-solutions/claude-agent-dispatch",
+  "repository": "https://github.com/wezz-solutions/claude-agent-dispatch",
+  "license": "MIT",
+  "keywords": ["dispatch", "agents", "ollama", "multi-provider", "parallel", "mcp"],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ${CLAUDE_PLUGIN_ROOT}/scripts/setup.py"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "dispatch": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/server.py"],
+      "env": {
+        "DISPATCH_PLUGIN_DIR": "${CLAUDE_PLUGIN_ROOT}"
+      }
+    }
+  }
 }

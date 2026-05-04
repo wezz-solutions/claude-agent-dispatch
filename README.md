@@ -34,40 +34,41 @@ Route tasks to **Anthropic**, **Ollama** (local + cloud), **OpenAI**, **Groq**, 
 
 ## Installation
 
-### As a Claude Code plugin
+### From Claude Code (recommended)
 
-```bash
-# Clone the plugin
-git clone https://github.com/wezz-solutions/claude-agent-dispatch.git
-
-# Project-level install (recommended)
-python claude-agent-dispatch/scripts/install.py
-
-# Or user-level (applies to all projects)
-python claude-agent-dispatch/scripts/install.py --user
+```
+/plugin install wezz-solutions/claude-agent-dispatch
 ```
 
-The installer registers:
-- MCP server in `.mcp.json` (or `~/.claude/mcp.json` with `--user`)
-- Status line in `.claude/settings.json`
-- Default `dispatch.json` configuration
+Or install at a specific scope:
 
-**Optional:** add the Agent-intercept hook (redirects native Agent tool → dispatch):
-
-```bash
-python claude-agent-dispatch/scripts/install.py --enforce
+```
+/plugin install wezz-solutions/claude-agent-dispatch --scope project   # shared via git
+/plugin install wezz-solutions/claude-agent-dispatch --scope user      # all your projects
+/plugin install wezz-solutions/claude-agent-dispatch --scope local     # this project only, gitignored
 ```
 
-**Restart Claude Code** after installation to load the MCP server.
+The plugin automatically:
+- Registers the MCP server (6 dispatch tools)
+- Creates default `dispatch.json` on first session
+- Makes `/dispatch` and `/dispatch-configure` skills available
 
 ### Uninstall
 
-```bash
-python claude-agent-dispatch/scripts/install.py --uninstall        # project
-python claude-agent-dispatch/scripts/install.py --user --uninstall  # user
+```
+/plugin uninstall claude-agent-dispatch
 ```
 
-Uninstall removes MCP registration and hooks but preserves your `dispatch.json` and dispatch history.
+### Manual install (alternative)
+
+```bash
+git clone https://github.com/wezz-solutions/claude-agent-dispatch.git
+python claude-agent-dispatch/scripts/install.py            # project-level
+python claude-agent-dispatch/scripts/install.py --user     # user-level
+python claude-agent-dispatch/scripts/install.py --enforce  # + Agent-intercept hook
+```
+
+Restart Claude Code after manual install.
 
 ---
 

@@ -1,6 +1,7 @@
 """
 Agent definition registry.
 Resolves agent names to definition text for prompt injection.
+Auto-discovers agents from plugin, project, and user directories.
 """
 
 import os
@@ -9,9 +10,37 @@ from typing import Optional
 
 PLUGIN_DIR = Path(os.environ.get(
     "DISPATCH_PLUGIN_DIR",
-    str(Path(__file__).resolve().parent.parent),
+    os.environ.get("CLAUDE_PLUGIN_ROOT", str(Path(__file__).resolve().parent.parent)),
 ))
 AGENTS_DIR = PLUGIN_DIR / "agents"
+
+
+def _find_project_root() -> Path:
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return cwd
+
+
+def _discovery_dirs() -> list[Path]:
+    """Agent search directories in priority order (first match wins)."""
+    project = _find_project_root()
+    return [
+        project / ".claude" / "agents",
+        project / "agents",
+        Path.home() / ".claude" / "agents",
+        AGENTS_DIR,
+    ]
+
+
+def _discover_agent(name: str) -> Optional[Path]:
+    """Search standard directories for {name}.md. Returns first match."""
+    for d in _discovery_dirs():
+        candidate = d / f"{name}.md"
+        if candidate.exists():
+            return candidate
+    return None
 
 
 class AgentRegistry:
@@ -25,9 +54,10 @@ class AgentRegistry:
         Resolution order:
         1. "" or "general" -> built-in general.md
         2. "raw" or "none" -> empty definition (prompt passes through)
-        3. Key in config agents -> load that file
+        3. Key in dispatch.json agents -> load configured file
         4. File path (contains / or \\ or ends .md) -> load directly
-        5. Name matching agents/{name}.md -> load built-in
+        5. Auto-discover from: project .claude/agents/, project agents/,
+           user ~/.claude/agents/, plugin agents/
         """
         if not agent_name or agent_name == "general":
             return self._load_builtin("general"), "general"
@@ -47,9 +77,9 @@ class AgentRegistry:
                 path = Path.cwd() / path
             return self._load_file(path), path.stem
 
-        builtin = AGENTS_DIR / f"{agent_name}.md"
-        if builtin.exists():
-            return self._load_builtin(agent_name), agent_name
+        discovered = _discover_agent(agent_name)
+        if discovered:
+            return self._load_file(discovered), agent_name
 
         available = ", ".join(self.list_available())
         raise ValueError(f"Unknown agent: '{agent_name}'. Available: {available}")
@@ -64,9 +94,10 @@ class AgentRegistry:
 
     def list_available(self) -> list:
         agents = set()
-        if AGENTS_DIR.exists():
-            for f in AGENTS_DIR.glob("*.md"):
-                agents.add(f.stem)
+        for d in _discovery_dirs():
+            if d.exists():
+                for f in d.glob("*.md"):
+                    agents.add(f.stem)
         agents.update(self._config.keys())
         return sorted(agents)
 

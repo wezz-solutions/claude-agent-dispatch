@@ -1,0 +1,26 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-agent-dispatch",
+  "description": "Multi-provider agent dispatch for Claude Code — parallel execution, tier spoofing, Ollama/OpenAI/Groq routing",
+  "owner": {
+    "name": "Wezz Solutions",
+    "email": "info@wezz-solutions.com"
+  },
+  "plugins": [
+    {
+      "name": "claude-agent-dispatch",
+      "description": "Route tasks to Anthropic, Ollama, OpenAI, Groq — with parallel dispatch, tier spoofing, live status, and audit trail",
+      "author": {
+        "name": "Wezz Solutions"
+      },
+      "category": "development",
+      "source": {
+        "source": "github",
+        "repo": "wezz-solutions/claude-agent-dispatch"
+      },
+      "homepage": "https://github.com/wezz-solutions/claude-agent-dispatch",
+      "version": "0.1.0",
+      "tags": ["agents", "dispatch", "ollama", "multi-provider", "parallel", "mcp"]
+    }
+  ]
+}

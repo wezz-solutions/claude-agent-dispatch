@@ -36,11 +36,21 @@ Route tasks to **Anthropic**, **Ollama** (local + cloud), **OpenAI**, **Groq**, 
 
 ### From Claude Code (recommended)
 
+**Option 1 — Direct install:**
+
 ```
 /plugin install wezz-solutions/claude-agent-dispatch
 ```
 
-Or install at a specific scope:
+**Option 2 — Add as marketplace, then browse:**
+
+```
+/plugin marketplace add wezz-solutions/claude-agent-dispatch
+```
+
+Then open `/plugin` → Discover tab → install from there.
+
+**Install scopes:**
 
 ```
 /plugin install wezz-solutions/claude-agent-dispatch --scope project   # shared via git
@@ -52,6 +62,7 @@ The plugin automatically:
 - Registers the MCP server (6 dispatch tools)
 - Creates default `dispatch.json` on first session
 - Makes `/dispatch` and `/dispatch-configure` skills available
+- Loads built-in agents (general, explore, reviewer, implementer)
 
 ### Uninstall
 
@@ -60,6 +71,8 @@ The plugin automatically:
 ```
 
 ### Manual install (alternative)
+
+If you prefer not to use the plugin system:
 
 ```bash
 git clone https://github.com/wezz-solutions/claude-agent-dispatch.git

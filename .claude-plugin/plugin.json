@@ -1,6 +1,6 @@
 {
-  "name": "agent-dispatch",
+  "name": "claude-agent-dispatch",
   "version": "0.1.0",
-  "description": "Multi-provider agent dispatch via MCP. Routes to Claude CLI (Anthropic) or OpenCode (Ollama, OpenAI, Groq, etc.).",
+  "description": "Multi-provider agent dispatch for Claude Code. Route tasks to Anthropic, Ollama, OpenAI, Groq — with parallel execution, tier spoofing, and live status.",
   "skills": "./skills/"
 }

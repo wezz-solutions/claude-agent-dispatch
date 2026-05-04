@@ -15,6 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from config import DispatchConfig
 from sentinel import SentinelManager, generate_dispatch_id
@@ -30,20 +31,29 @@ _registry: AgentRegistry = None
 _backends: dict = {}
 
 
-def _init():
-    global _config, _sentinel, _registry, _backends
+def _init_backends():
+    global _backends
+    if not _backends:
+        _backends = {
+            "claude-cli": ClaudeCLIBackend(),
+            "opencode": OpenCodeBackend(),
+        }
+
+
+def _reload_config():
+    """Re-read config from disk. Called on every tool invocation."""
+    global _config, _sentinel, _registry
     _config = DispatchConfig()
-    _sentinel = SentinelManager(_config.dispatches_dir)
     _registry = AgentRegistry(_config.agents)
-    _backends = {
-        "claude-cli": ClaudeCLIBackend(),
-        "opencode": OpenCodeBackend(),
-    }
+    new_sentinel = _sentinel is None or _sentinel.dir != _config.dispatches_dir
+    if new_sentinel:
+        _sentinel = SentinelManager(_config.dispatches_dir)
+        _sentinel.cleanup_stale()
 
 
 def _ensure_init():
-    if _config is None:
-        _init()
+    _init_backends()
+    _reload_config()
 
 
 def _get_backend(name: str):
@@ -68,7 +78,7 @@ def _get_backend(name: str):
 #  Tool: run  (headless dispatch)
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("run")
+@mcp.tool("run", annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))
 async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
     """
     Dispatch a headless agent to perform a task. Blocks until completion.
@@ -87,19 +97,31 @@ async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
                Or any alias defined in dispatch.json
     """
     _ensure_init()
+    _t0 = time.time()
+    print(f"[dispatch {_t0:.1f}] run ENTER query={query} model={model}", file=sys.stderr, flush=True)
 
-    resolved = _config.resolve_model(model)
-    backend = _get_backend(resolved["backend"])
     agent_def, agent_name = _registry.resolve(agent)
+    effective_model = model or _registry.get_default_model(agent_name) or ""
+    resolved = _config.resolve_model(effective_model)
+    backend = _get_backend(resolved["backend"])
     dispatch_id = generate_dispatch_id()
     timeout = resolved["timeout"]
 
     last_activity_ts = [time.time()]
+    token_state = {"input": 0, "output": 0}
 
-    def on_activity():
+    def on_activity(input_tokens=0, output_tokens=0):
         last_activity_ts[0] = time.time()
+        if input_tokens:
+            token_state["input"] = input_tokens
+        if output_tokens:
+            token_state["output"] = output_tokens
         try:
-            _sentinel.update_activity(dispatch_id)
+            _sentinel.update_activity(
+                dispatch_id,
+                input_tokens=token_state["input"],
+                output_tokens=token_state["output"],
+            )
         except Exception:
             pass
 
@@ -125,6 +147,8 @@ async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
             dispatch_id=dispatch_id,
             on_activity=on_activity,
             inactivity_threshold=_config.inactivity_threshold,
+            provider_config=resolved["provider_config"],
+            tier=resolved.get("tier"),
         )
 
         done_data = result.to_dict()
@@ -147,6 +171,18 @@ async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
         duration = done.get("duration_seconds", 0) if done else 0
         return format_result_for_claude(dispatch_id, result, duration)
 
+    except asyncio.CancelledError:
+        _sentinel.write_done(dispatch_id, {
+            "status": "CANCELLED",
+            "agent": agent_name,
+            "model": resolved["model_id"],
+            "provider": resolved["provider"],
+            "backend": resolved["backend"],
+            "output": "Cancelled (tool call rejected or MCP request aborted)",
+            "exit_code": -1,
+        })
+        raise
+
     except Exception as e:
         _sentinel.write_done(dispatch_id, {
             "status": "FAILED",
@@ -164,7 +200,7 @@ async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
 #  Tool: interactive  (terminal session)
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("interactive")
+@mcp.tool("interactive", annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))
 async def interactive(query: str, prompt: str, agent: str = "", model: str = "") -> str:
     """
     Open an interactive agent session in a new terminal window/pane.
@@ -182,8 +218,9 @@ async def interactive(query: str, prompt: str, agent: str = "", model: str = "")
     """
     _ensure_init()
 
-    resolved = _config.resolve_model(model)
     agent_def, agent_name = _registry.resolve(agent)
+    effective_model = model or _registry.get_default_model(agent_name) or ""
+    resolved = _config.resolve_model(effective_model)
     dispatch_id = generate_dispatch_id()
 
     try:
@@ -224,7 +261,7 @@ async def interactive(query: str, prompt: str, agent: str = "", model: str = "")
 #  Tool: status
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("status")
+@mcp.tool("status", annotations=ToolAnnotations(readOnlyHint=True))
 async def status(query: str, id: str = "") -> str:
     """
     Check dispatch status. Empty id = list all active dispatches.
@@ -310,7 +347,7 @@ async def status(query: str, id: str = "") -> str:
 #  Tool: result
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("result")
+@mcp.tool("result", annotations=ToolAnnotations(readOnlyHint=True))
 async def result(query: str, id: str) -> str:
     """
     Get completed dispatch result. If still running, polls up to 60s.
@@ -366,7 +403,7 @@ async def result(query: str, id: str) -> str:
 #  Tool: cancel
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("cancel")
+@mcp.tool("cancel", annotations=ToolAnnotations(readOnlyHint=True))
 async def cancel(query: str, id: str) -> str:
     """
     Cancel a running dispatch by terminating its process.
@@ -419,7 +456,7 @@ async def cancel(query: str, id: str) -> str:
 #  Tool: config
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool("config")
+@mcp.tool("config", annotations=ToolAnnotations(readOnlyHint=True))
 async def config(query: str) -> str:
     """
     Show current dispatch configuration: models, agents, providers, backends.
@@ -451,5 +488,5 @@ async def config(query: str) -> str:
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    _init()
+    _ensure_init()
     mcp.run(transport="stdio")

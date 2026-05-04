@@ -54,7 +54,7 @@ def install(scope: str, enforce: bool):
     project_root = _find_project_root()
     is_user = scope == "user"
 
-    print(f"AgentDispatch installer")
+    print(f"claude-agent-dispatch installer")
     print(f"  Plugin dir: {PLUGIN_DIR}")
     print(f"  Scope: {'user (~/.claude/)' if is_user else f'project ({project_root})'}")
     print()
@@ -150,7 +150,7 @@ def install(scope: str, enforce: bool):
         settings_sl["statusLine"] = {
             "type": "command",
             "command": statusline_cmd,
-            "refreshInterval": 3,
+            "refreshInterval": 1,
         }
         _save_json(settings_path_sl, settings_sl)
         print(f"  Status line configured in {settings_path_sl}")
@@ -225,7 +225,7 @@ def uninstall(scope: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AgentDispatch installer")
+    parser = argparse.ArgumentParser(description="claude-agent-dispatch installer")
     parser.add_argument("--user", action="store_true", help="Install at user level (~/.claude/)")
     parser.add_argument("--enforce", action="store_true", help="Add Agent-intercept hook")
     parser.add_argument("--uninstall", action="store_true", help="Remove MCP and hooks")

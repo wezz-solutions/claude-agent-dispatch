@@ -74,3 +74,8 @@ class AgentRegistry:
         if agent_name in self._config:
             return self._config[agent_name].get("default_tools")
         return None
+
+    def get_default_model(self, agent_name: str) -> Optional[str]:
+        if agent_name in self._config:
+            return self._config[agent_name].get("default_model")
+        return None

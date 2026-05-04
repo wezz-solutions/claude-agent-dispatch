@@ -43,6 +43,13 @@ def parse_claude_cli_output(stdout: str, stderr: str, exit_code: int,
         data = json.loads(stdout)
         result.output = data.get("result", stdout)
         result.cost_usd = data.get("total_cost_usd")
+        usage = data.get("usage", {})
+        result.input_tokens = (
+            (usage.get("input_tokens") or 0)
+            + (usage.get("cache_read_input_tokens") or 0)
+            + (usage.get("cache_creation_input_tokens") or 0)
+        )
+        result.output_tokens = usage.get("output_tokens")
     except (json.JSONDecodeError, KeyError):
         result.output = stdout.strip()
 

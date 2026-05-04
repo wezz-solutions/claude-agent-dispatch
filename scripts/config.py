@@ -5,6 +5,7 @@ Resolution: runtime params -> project dispatch.json -> user dispatch.json -> def
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -21,6 +22,25 @@ def _find_project_root() -> Path:
         if (parent / ".git").exists():
             return parent
     return cwd
+
+
+def _discover_session_id(project_root: Path) -> str:
+    """
+    Discover Claude Code session_id from transcript files.
+    Returns session UUID or empty string if not determinable.
+    """
+    sanitized = re.sub(r"[^a-zA-Z0-9]", "-", str(project_root))
+    state_dir = Path.home() / ".claude" / "projects" / sanitized
+    if not state_dir.exists():
+        return ""
+    transcripts = sorted(
+        state_dir.glob("*.jsonl"),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+    if transcripts:
+        return transcripts[0].stem
+    return ""
 
 
 def _load_json(path: Path) -> dict:
@@ -47,6 +67,7 @@ class DispatchConfig:
     def __init__(self):
         self._project_root = _find_project_root()
         self._config = self._resolve()
+        self._session_id = _discover_session_id(self._project_root)
 
     def _resolve(self) -> dict:
         defaults = _load_json(DEFAULTS_PATH)
@@ -74,9 +95,16 @@ class DispatchConfig:
         return self._config.get("max_concurrent", 4)
 
     @property
+    def session_id(self) -> str:
+        return self._session_id
+
+    @property
     def dispatches_dir(self) -> Path:
         rel = self._config.get("dispatches_dir", ".claude/dispatches")
-        return self._project_root / rel
+        base = self._project_root / rel
+        if self._session_id:
+            return base / self._session_id
+        return base
 
     @property
     def audit_enabled(self) -> bool:
@@ -130,14 +158,17 @@ class DispatchConfig:
                     "model_id": model_cfg.get("id", model_alias),
                     "timeout": model_cfg.get("timeout", self.default_timeout),
                     "provider_config": prov_config,
+                    "tier": model_cfg.get("tier"),
                 }
 
+        prov_name = provider_hint or "anthropic"
+        prov_cfg = self.providers.get(prov_name, {})
         return {
-            "provider": provider_hint or "anthropic",
-            "backend": "claude-cli" if not provider_hint or provider_hint == "anthropic" else "opencode",
+            "provider": prov_name,
+            "backend": prov_cfg.get("backend", "claude-cli" if prov_name == "anthropic" else "opencode"),
             "model_id": model_alias,
             "timeout": self.default_timeout,
-            "provider_config": self.providers.get(provider_hint or "anthropic", {}),
+            "provider_config": prov_cfg,
         }
 
     def to_summary(self) -> str:

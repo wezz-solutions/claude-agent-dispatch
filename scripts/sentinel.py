@@ -90,11 +90,16 @@ class SentinelManager:
             "last_activity": _now_iso(),
         })
 
-    def update_activity(self, dispatch_id: str):
+    def update_activity(self, dispatch_id: str, input_tokens: int = 0,
+                        output_tokens: int = 0):
         path = self.dir / f"{dispatch_id}.marker"
         marker = _read_json(path)
         if marker:
             marker["last_activity"] = _now_iso()
+            if input_tokens:
+                marker["input_tokens"] = input_tokens
+            if output_tokens:
+                marker["output_tokens"] = output_tokens
             _atomic_write(path, marker)
 
     def update_marker_status(self, dispatch_id: str, status: str):
@@ -169,6 +174,7 @@ class SentinelManager:
         return {"status": marker.get("status", "RUNNING"), "data": marker}
 
     def list_active(self) -> list:
+        self.cleanup_stale()
         active = []
         for mf in self.dir.glob("*.marker"):
             info = self.get_status(mf.stem)

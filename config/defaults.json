@@ -1,8 +1,8 @@
 {
   "version": 1,
   "default_model": "sonnet",
-  "enforce_dispatch": true,
-  "max_concurrent": 4,
+  "enforce_dispatch": false,
+  "max_concurrent": 8,
   "dispatches_dir": ".claude/dispatches",
   "audit": true,
   "default_timeout": 3600,
@@ -12,33 +12,17 @@
     "anthropic": {
       "backend": "claude-cli",
       "models": {
-        "opus":   { "id": "claude-opus-4-6",              "timeout": 3600 },
-        "sonnet": { "id": "claude-sonnet-4-6",             "timeout": 3600 },
-        "haiku":  { "id": "claude-haiku-4-5-20251001",     "timeout": 1800 }
+        "opus":   { "id": "claude-opus-4-6",          "timeout": 3600 },
+        "sonnet": { "id": "claude-sonnet-4-6",         "timeout": 3600 },
+        "haiku":  { "id": "claude-haiku-4-5-20251001", "timeout": 1800 }
       }
     },
     "ollama": {
-      "backend": "opencode",
-      "opencode_provider": "ollama",
+      "backend": "claude-cli",
+      "base_url": "http://localhost:11434",
       "models": {
-        "qwen3:30b":    { "id": "qwen3:30b",    "timeout": 3600 },
-        "qwen3:235b":   { "id": "qwen3:235b",   "timeout": 3600 },
-        "llama3.3:70b": { "id": "llama3.3:70b",  "timeout": 3600 }
-      }
-    },
-    "openai": {
-      "backend": "opencode",
-      "opencode_provider": "openai",
-      "models": {
-        "gpt-4.1":      { "id": "gpt-4.1",      "timeout": 3600 },
-        "gpt-4.1-mini": { "id": "gpt-4.1-mini", "timeout": 1800 }
-      }
-    },
-    "groq": {
-      "backend": "opencode",
-      "opencode_provider": "groq",
-      "models": {
-        "llama-4-scout": { "id": "meta-llama/llama-4-scout-17b-16e-instruct", "timeout": 1800 }
+        "kimi-k2.6:cloud":    { "id": "kimi-k2.6:cloud",    "timeout": 3600, "tier": "sonnet" },
+        "qwen3.5:397b-cloud": { "id": "qwen3.5:397b-cloud", "timeout": 3600, "tier": "sonnet" }
       }
     }
   },

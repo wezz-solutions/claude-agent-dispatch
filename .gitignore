@@ -4,3 +4,4 @@ __pycache__/
 .claude/dispatches/
 *.tmp
 .env
+kimi-system-prompt-dump.md

@@ -453,6 +453,61 @@ async def cancel(query: str, id: str) -> str:
 
 
 # ═══════════════════════════════════════════════════════════
+#  Tool: agents
+# ═══════════════════════════════════════════════════════════
+
+@mcp.tool("agents", annotations=ToolAnnotations(readOnlyHint=True))
+async def agents(query: str) -> str:
+    """
+    List all agents available for dispatch. Discovers from:
+    project .claude/agents/, project agents/, user ~/.claude/agents/, and plugin built-ins.
+
+    Args:
+        query: Short label (max 20 chars) — e.g. "List agents"
+    """
+    _ensure_init()
+
+    from registry import _discovery_dirs, _discover_agent
+
+    lines = ["## Available Agents", ""]
+    lines.append("| Agent | Source | Config |")
+    lines.append("|-------|--------|--------|")
+
+    seen = set()
+    # Configured agents (from dispatch.json)
+    for name, cfg in _config.agents.items():
+        seen.add(name)
+        tools = cfg.get("default_tools", "")
+        model = cfg.get("default_model", "")
+        config_parts = []
+        if tools:
+            config_parts.append(f"tools: {tools}")
+        if model:
+            config_parts.append(f"model: {model}")
+        config_str = ", ".join(config_parts) if config_parts else "-"
+        lines.append(f"| `{name}` | dispatch.json | {config_str} |")
+
+    # Discovered agents (from directories)
+    for d in _discovery_dirs():
+        if not d.exists():
+            continue
+        for f in sorted(d.glob("*.md")):
+            name = f.stem
+            if name in seen:
+                continue
+            seen.add(name)
+            source = str(d).replace(str(Path.home()), "~")
+            lines.append(f"| `{name}` | {source} | - |")
+
+    lines.append("")
+    lines.append("Special values: `raw` (no agent definition), `general` (default)")
+    lines.append("")
+    lines.append("Custom: pass any `.md` file path as agent parameter")
+
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════
 #  Tool: config
 # ═══════════════════════════════════════════════════════════
 

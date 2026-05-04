@@ -86,15 +86,14 @@ async def run(query: str, prompt: str, agent: str = "", model: str = "") -> str:
     Args:
         query: Short label (max 20 chars) — what will be done, e.g. "Fix auth bug"
         prompt: Full task description for the agent
-        agent: Agent type or path to .md file. Empty = general purpose.
-               Built-in: general, explore, reviewer, implementer.
+        agent: Agent name, path to .md file, or empty for general purpose.
+               Use mcp__dispatch__agents to list all available agents.
                Special: "raw" = no agent definition (prompt goes directly).
-               Custom: file path to your own agent .md
         model: Model alias or provider/model. Empty = config default.
                Anthropic: "sonnet", "opus", "haiku"
-               Ollama: "ollama/qwen3:30b", "ollama/qwen3:235b"
+               Ollama: "ollama/qwen3:30b", "ollama/kimi-k2.6:cloud"
                OpenAI: "openai/gpt-4.1"
-               Or any alias defined in dispatch.json
+               Use mcp__dispatch__config to list all available models.
     """
     _ensure_init()
     _t0 = time.time()
@@ -213,7 +212,7 @@ async def interactive(query: str, prompt: str, agent: str = "", model: str = "")
     Args:
         query: Short label (max 20 chars)
         prompt: Initial task/context for the agent
-        agent: Agent type or path (empty = general)
+        agent: Agent name or path. Use mcp__dispatch__agents to list available agents.
         model: Model alias (empty = config default, Anthropic only for interactive)
     """
     _ensure_init()
